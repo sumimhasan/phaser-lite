@@ -1,0 +1,249 @@
+PHASER-LITE GAME ENGINE - DOCUMENTATION (PLAIN TEXT)
+====================================================================
+OVERVIEW
+
+Phaser-Lite is a lightweight, DOM-based 2D game engine built entirely 
+in JavaScript. It uses an Entity-Component-System (ECS) architecture 
+for clean, maintainable code and focuses on performance and bug 
+prevention.
+
+Key Features:
+
+    Pure JavaScript (ES6+), no external dependencies
+    DOM-first rendering using CSS transforms (no Canvas/WebGL)
+    Entity-Component-System (ECS) architecture
+    Fixed timestep physics loop
+    Built-in memory leak prevention
+    Mobile-ready input handling (touch + mouse + keyboard)
+    Asset preloading system
+    Collision detection with AABB resolution
+
+====================================================================
+CORE CONCEPTS
+
+    ENTITY-COMPONENT-SYSTEM (ECS)
+
+Entities: Lightweight containers that hold components.
+Components: Pure data bags with no logic (e.g., Transform, Sprite).
+Systems: Process entities with specific components (e.g., PhysicsSystem).
+
+Example:
+  const player = scene.createEntity();
+  player.addComponent(Transform, 100, 100);
+  player.addComponent(Sprite, 'player', 32, 32);
+  player.addComponent(Rigidbody, false, 1, true);
+  player.addComponent(Collider, 30, 30);
+
+    FIXED TIMESTEP GAME LOOP
+
+    Physics updates at fixed 60 FPS interval
+    Rendering runs at variable framerate
+    Frame skipping prevents "spiral of death"
+    Delta time clamping prevents physics explosions
+
+    DOM RENDERING
+
+    Uses CSS transforms for position/rotation/scale
+    GPU-accelerated via translate()/rotate()/scale()
+    Automatic z-index sorting by Y position
+    Memory-safe DOM element cleanup
+
+====================================================================
+FILE STRUCTURE
+
+phaser-lite/
+├── src/
+│   ├── core/
+│   │   ├── Engine.js          # Game loop & orchestration
+│   │   ├── Entity.js          # Entity container
+│   │   ├── Component.js       # Base component class
+│   │   └── System.js          # Base system class
+│   ├── systems/
+│   │   ├── RenderSystem.js    # DOM rendering
+│   │   ├── PhysicsSystem.js   # AABB physics
+│   │   ├── InputSystem.js     # Input handling
+│   │   └── AudioSystem.js     # Web Audio API wrapper
+│   ├── components/
+│   │   ├── Transform.js       # Position/rotation/scale
+│   │   ├── Sprite.js          # Visual representation
+│   │   ├── Rigidbody.js       # Physics properties
+│   │   ├── Collider.js        # Collision shape
+│   │   └── Script.js          # Custom game logic
+│   ├── utils/
+│   │   ├── Vector2.js         # 2D vector math
+│   │   ├── AABB.js            # Collision helpers
+│   │   ├── AssetLoader.js     # Asset preloading
+│   │   └── EventEmitter.js    # Event system
+│   ├── scenes/
+│   │   └── Scene.js           # Entity container
+│   └── main.js                # Entry point
+├── assets/                    # Game assets
+├── index.html                 # HTML container
+└── style.css                  # Base styles
+====================================================================
+GETTING STARTED
+
+    CREATE HTML CONTAINER
+
+Add this to your HTML:
+  
+
+  
+
+    BASIC SETUP (main.js)
+
+import Engine from './core/Engine.js';
+import Scene from './scenes/Scene.js';
+// ... import other classes ...
+
+const engine = new Engine();
+engine.registerSystem(RenderSystem);
+engine.registerSystem(InputSystem);
+engine.registerSystem(PhysicsSystem);
+
+class MyScene extends Scene {
+  init() {
+    const entity = this.createEntity();
+    entity.addComponent(Transform, 100, 100);
+    entity.addComponent(Sprite, 'my-sprite', 32, 32);
+  }
+}
+
+engine.addScene('main', new MyScene());
+engine.start('main');
+
+    ASSET LOADING
+
+const loader = new AssetLoader();
+loader.load([
+  { type: 'image', key: 'player', src: 'assets/player.png' }
+]).then(() => {
+  engine.start('main');
+});
+====================================================================
+COMMON BUGS & MITIGATIONS
+
+    MEMORY LEAKS
+    Cause: Unremoved DOM elements/event listeners
+    Fix: Entity.destroy() automatically cleans up DOM elements
+    PHYSICS JITTER
+    Cause: Variable timestep physics
+    Fix: Fixed timestep loop with frame skipping
+    DOM PERFORMANCE ISSUES
+    Cause: Layout thrashing from frequent style changes
+    Fix: Batch DOM updates using CSS transforms
+    INPUT CONFLICTS
+    Cause: Multiple systems binding to same events
+    Fix: Centralized InputSystem with state queries
+    ASSET LOADING RACES
+    Cause: Sprites rendering before images load
+    Fix: AssetLoader with Promise-based loading
+    COLLISION TUNNELING
+    Cause: Fast objects skipping collisions
+    Fix: Continuous collision detection (swept AABB)
+    Z-INDEX CHAOS
+    Cause: Uncontrolled stacking of DOM elements
+    Fix: Automatic z-index sorting by Y position
+    MOBILE TOUCH ISSUES
+    Cause: 300ms click delay, page zoom
+    Fix: touch-action: none + viewport meta tag
+
+====================================================================
+COMPONENT REFERENCE
+
+Transform(x, y, rotation, scaleX, scaleY)
+
+    position: Vector2
+    rotation: radians
+    scale: {x, y}
+
+Sprite(assetKey, width, height)
+
+    Creates DOM element with background image
+    Automatically cleaned up on destroy
+
+Rigidbody(isStatic, mass, affectedByGravity)
+
+    velocity: Vector2
+    acceleration: Vector2
+    applyForce(force): applies physics force
+
+Collider(width, height, isTrigger)
+
+    AABB collision shape
+    isTrigger: no physical collision response
+
+Script({ start, update, destroy })
+
+    Custom game logic callbacks
+    update(deltaTime) called every frame
+
+====================================================================
+SYSTEM REFERENCE
+
+RenderSystem
+
+    Processes [Transform, Sprite] entities
+    Updates CSS transforms
+    Sorts by Y position for layering
+
+PhysicsSystem
+
+    Processes [Transform, Rigidbody, Collider] entities
+    Applies gravity and velocity
+    Resolves AABB collisions
+    Emits 'collision' events
+
+InputSystem
+
+    isKeyDown(keyCode): check key state
+    getMousePosition(): {x, y}
+    getActiveTouches(): array of touch points
+
+AudioSystem
+
+    play(key, volume, loop): plays sound
+    registerSound(key, buffer): adds pre-loaded sound
+
+====================================================================
+BEST PRACTICES
+
+    ALWAYS use fixed timestep for physics
+    NEVER add logic to components (keep them data-only)
+    USE Script components for custom game logic
+    LOAD all assets before starting scenes
+    DESTROY entities when no longer needed
+    AVOID deep inheritance hierarchies
+    USE Vector2 for all position/velocity calculations
+    TEST on mobile devices early and often
+
+====================================================================
+ROADMAP
+
+Near-term:
+
+    Particle system
+    Tilemap support
+    Animation system
+    Camera system
+
+Long-term:
+
+    Canvas renderer option
+    WebGL renderer option
+    Network synchronization
+    Save/load system
+
+====================================================================
+SUPPORT
+
+This is a reference implementation. For issues:
+
+    Check console for error messages
+    Verify asset paths are correct
+    Ensure #game-container exists in HTML
+    Test in modern browsers (Chrome, Firefox, Safari)
+
+Debugging tip: Access engine globally via window.gameEngine
+====================================================================
+END OF DOCUMENTATION
